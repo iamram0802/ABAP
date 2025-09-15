@@ -1,0 +1,93 @@
+
+
+REPORT zram_salv_container.
+
+data :s_vbeln type vbeln.
+
+SELECT-OPTIONS : p_vbeln for s_vbeln.
+
+"--------------------------------------------------------------
+CLASS class DEFINITION.
+  PUBLIC SECTION.
+    METHODS: display.
+    DATA :  it_op TYPE TABLE OF zstrc_new.
+
+ENDCLASS.
+"--------------------------------------------------------------
+
+CLASS class IMPLEMENTATION.
+
+  METHOD Display.
+    SELECT vbeln erdat ernam erzet vbtyp
+      FROM vbak
+      INTO TABLE it_op
+      WHERE vbeln in p_vbeln.
+
+    IF sy-subrc <> 0.
+      MESSAGE 'No data found ' TYPE 'I'.
+    ENDIF.
+
+    DATA: lo_cont TYPE REF TO cl_gui_custom_container,
+          lo_grid TYPE REF TO cl_gui_alv_grid,
+          lt_fcat TYPE lvc_t_fcat,
+          ls_fcat type  lvc_s_fcat.
+
+
+    CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+      EXPORTING
+*       i_buffer_active        =
+        i_structure_name       = 'zstrc_new'
+*       i_client_never_display = 'X'
+*       i_bypassing_buffer     =
+*       i_internal_tabname     =
+      CHANGING
+        ct_fieldcat            = lt_fcat
+      EXCEPTIONS
+        inconsistent_interface = 1
+        program_error          = 2
+        OTHERS                 = 3.
+    IF sy-subrc <> 0.
+*    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*      WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ENDIF.
+"--------------------------------------------------------------
+    lo_cont = NEW cl_gui_custom_container(
+               container_name = 'ALV' ).
+
+    lo_grid = NEW cl_gui_alv_grid(
+                i_parent = lo_cont ).
+
+    lo_grid->set_table_for_first_display(
+      CHANGING
+        it_outtab                     = it_op
+        it_fieldcatalog               = lt_fcat
+*        it_sort                       =
+*        it_filter                     =
+      EXCEPTIONS
+        invalid_parameter_combination = 1
+        program_error                 = 2
+        too_many_lines                = 3
+        others                        = 4
+    ).
+    IF SY-SUBRC <> 0.
+     MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+       WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ENDIF.
+
+
+ENDMETHOD.
+
+ENDCLASS.
+
+"--------------------------------------------------------------
+
+START-OF-SELECTION.
+
+  DATA(lo_alv) = NEW class( ).
+  lo_alv->display( ).
+
+  CALL SCREEN '0101'.
+
+INCLUDE zram_salv_container_status_o02.
+
+INCLUDE zram_salv_container_user_coi02.
