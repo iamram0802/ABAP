@@ -1,0 +1,89 @@
+TYPES: BEGIN OF ty_student,
+         id    TYPE i,
+         name  TYPE string,
+         marks TYPE p DECIMALS 2,
+       END OF ty_student.
+
+TYPES: BEGIN OF ty_result,
+         id      TYPE i,
+         name    TYPE string,
+         marks   TYPE p DECIMALS 2,
+         percent TYPE i,
+         grade   TYPE string,
+       END OF ty_result.
+
+TYPES: BEGIN OF ty_rank,
+         name  TYPE string,
+         grade TYPE string,
+       END OF ty_rank.
+
+DATA: lt_students TYPE STANDARD TABLE OF ty_student WITH EMPTY KEY,                           " empty key - no unique key
+      lt_results  TYPE SORTED TABLE OF ty_result WITH NON-UNIQUE KEY percent,                 " non unique - key with duplicate possible
+      lt_rank     TYPE STANDARD TABLE OF ty_rank.
+
+lt_students = VALUE #(
+  ( id = 1 name = 'Ram'     marks = 85 )
+  ( id = 2 name = 'Kumar'   marks = 85 )
+  ( id = 3 name = 'Rahul'   marks = 45 )
+  ( id = 4 name = 'Priya'   marks = 92 )
+  ( id = 5 name = 'Saran'   marks = 73 )
+).
+
+WRITE: / '-List of Student-'.
+LOOP AT lt_students INTO DATA(ls_stud).
+  WRITE: / |ID: { ls_stud-id } Name: { ls_stud-name } Marks: { ls_stud-marks }|.
+ENDLOOP.
+ULINE.
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+lt_results = VALUE #(
+  FOR stud IN lt_students                                       "stud act as workarea
+  LET percent = stud-marks
+      grade   = COND #(
+                  WHEN percent >= 80 THEN 'A'                  "cond type/(#)( 'when' condition 'then' value )  "
+                  WHEN percent >= 60 THEN 'B'
+                  WHEN percent >= 40 THEN 'C'
+                  ELSE 'F' ) IN
+  ( id      = stud-id
+    name    = stud-name
+    marks   = stud-marks
+    percent = percent
+    grade   = grade )
+).
+
+WRITE: / '-Results with Grade-'.
+LOOP AT lt_results INTO DATA(ls_res).
+  WRITE: / |{ ls_res-name } - Marks: { ls_res-marks } = { ls_res-percent }% Grade: { ls_res-grade }|.
+ENDLOOP.
+ULINE.
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+DATA(lt_toppers) = FILTER #( lt_results WHERE percent > 70 ).       " get the data with matching values
+
+WRITE: / '-Toppers (Above 70%)-'.
+LOOP AT lt_toppers INTO DATA(ls_top).
+  WRITE: / |{ ls_top-name } = { ls_top-percent }% (Grade { ls_top-grade })|.
+ENDLOOP.
+ULINE.
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+lt_rank = VALUE #(
+  FOR r IN lt_results
+  ( name = r-name grade = r-grade )
+).
+
+WRITE: / '-Ranks (Only Name & Grade)-'.
+LOOP AT lt_rank INTO DATA(ls_sum).
+  WRITE: / |{ ls_sum-name } = Grade { ls_sum-grade }|.
+ENDLOOP.
+ULINE.
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+DATA(total_mark) = REDUCE #( INIT sum = 0                                               "reduce multiple into single
+                           FOR row IN lt_results
+                             NEXT sum = sum + row-marks ).
+
+WRITE: / | Total Marks of Class: { total_mark } |.
