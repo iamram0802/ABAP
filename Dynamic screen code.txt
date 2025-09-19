@@ -1,28 +1,35 @@
+*&---------------------------------------------------------------------*
+*& Report zram_dynamic_screen
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zram_dynamic_screen.
+
 
 TABLES : t024e, vbkd, ekko , mara.
 
-SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
 
-PARAMETERS : r_pur RADIOBUTTON GROUP rg DEFAULT 'X' USER-COMMAND usr,
-             r_mat RADIOBUTTON GROUP rg.
+  PARAMETERS : r_pur RADIOBUTTON GROUP rg DEFAULT 'X' USER-COMMAND usr,
+               r_mat RADIOBUTTON GROUP rg.
 SELECTION-SCREEN END OF BLOCK b1.
 
-SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE text-002.
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-002.
 
-SELECT-OPTIONS:  s_bukrs FOR ekko-bukrs MODIF ID po,  "comp code
-                 s_bsart FOR ekko-bsart MODIF ID po,  "doc type
-                 s_ebeln FOR ekko-ebeln MODIF ID po,  "po doc num
-                 s_bstdk FOR vbkd-bstdk MODIF ID po,  "po date
-                 s_lifnr FOR ekko-lifnr MODIF ID po.  " vendor
+  SELECT-OPTIONS:  s_ebeln FOR ekko-ebeln MODIF ID po ,   "po doc num
+                   s_bukrs FOR ekko-bukrs MODIF ID po,              "comp code
+                   s_bsart FOR ekko-bsart MODIF ID po,              "doc type
+                   s_bstdk FOR vbkd-bstdk MODIF ID po,              "po date
+                   s_lifnr FOR ekko-lifnr MODIF ID po.               " vendor
 
 
 
 SELECTION-SCREEN END OF BLOCK b2.
 
-SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE text-003.
+SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE TEXT-003.
 
-SELECT-OPTIONS: s_matnr FOR mara-matnr MODIF ID mat,
-                s_mtart FOR mara-mtart MODIF ID mat.
+  SELECT-OPTIONS: s_matnr FOR mara-matnr MODIF ID mat,
+                  s_mtart FOR mara-mtart MODIF ID mat.
 
 
 SELECTION-SCREEN END OF BLOCK b3.
@@ -32,33 +39,34 @@ SELECTION-SCREEN END OF BLOCK b3.
 " Declaration for Purchase Order
 
 DATA : it_ekko TYPE STANDARD TABLE OF ekko,
-              wa_ekko TYPE ekko.
+       wa_ekko TYPE ekko.
 DATA : it_t024e TYPE STANDARD TABLE OF t024e,
-              wa_t024e TYPE t024e.
+       wa_t024e TYPE t024e.
 
 
-TYPES : BEGIN OF ty_vbkd,
-        ebeln TYPE ebeln,
-        bsrdk TYPE bstdk,
-        posnr TYPE posnr,
-END OF ty_vbkd.
+TYPES : BEGIN OF ty_ekpo,
+          ebeln TYPE ebeln,
+          ebelp TYPE ebelp,
+          bukrs TYPE bukrs,
+          matnr TYPE matnr,
+          matkl TYPE matkl,
+        END OF ty_ekpo.
 
-DATA : it_vbkd TYPE STANDARD TABLE OF vbkd,
-       wa_vbkd TYPE vbkd.
+DATA : it_ekpo TYPE STANDARD TABLE OF ty_ekpo,
+       wa_ekpo TYPE ty_ekpo.
 
 TYPES : BEGIN OF ty_op2,
-       ebeln TYPE ebeln,
-       bukrs TYPE bukrs,
-       bsart TYPE bsart,
-       bstdk TYPE bstdk,
-       ekorg TYPE ekorg,
-       posnr TYPE posnr,
-       matnr TYPE matnr,
-       menge TYPE menge,
-  END OF ty_op2.
+          ebeln TYPE ebeln,
+          bukrs TYPE bukrs,
+          bsart TYPE bsart,
+          ekorg TYPE ekorg,
+          ebelp TYPE ebelp,
+          matnr TYPE matnr,
+          matkl TYPE matkl,
+        END OF ty_op2.
 
-  DATA : it_op2 TYPE STANDARD TABLE OF ty_op2,
-         wa_op2 TYPE ty_op2.
+DATA : it_op2 TYPE STANDARD TABLE OF ty_op2,
+       wa_op2 TYPE ty_op2.
 
 
 " Declaration for materials
@@ -90,28 +98,28 @@ DATA :it_makt TYPE STANDARD TABLE OF ty_makt,
 " output fields for materials
 
 TYPES : BEGIN OF ty_op,
-         matnr TYPE matnr,
-         ersda TYPE ersda,
-         ernam TYPE ernam,
-         laeda TYPE laeda,
-         aenam TYPE aenam,
-         pstat TYPE pstat_d,
-         lvorm TYPE lvorm,
-         mbrsh TYPE mbrsh,
-         matkl TYPE matkl,
-         bismt TYPE bismt,
-         meins TYPE meins,
-         brgew TYPE brgew,
-         ntgew TYPE ntgew,
-         gewei TYPE gewei,
-         volum TYPE volum,
-         bwvor TYPE bwvor,
-         bwscl TYPE bwscl,
-         werks TYPE werks_d,
-         lgort TYPE lgort_d,
-         labst TYPE labst,
-         spras TYPE spras,
-         maktx TYPE maktx,
+          matnr TYPE matnr,
+          ersda TYPE ersda,
+          ernam TYPE ernam,
+          laeda TYPE laeda,
+          aenam TYPE aenam,
+          pstat TYPE pstat_d,
+          lvorm TYPE lvorm,
+          mbrsh TYPE mbrsh,
+          matkl TYPE matkl,
+          bismt TYPE bismt,
+          meins TYPE meins,
+          brgew TYPE brgew,
+          ntgew TYPE ntgew,
+          gewei TYPE gewei,
+          volum TYPE volum,
+          bwvor TYPE bwvor,
+          bwscl TYPE bwscl,
+          werks TYPE werks_d,
+          lgort TYPE lgort_d,
+          labst TYPE labst,
+          spras TYPE spras,
+          maktx TYPE maktx,
         END OF ty_op.
 
 DATA : it_op TYPE STANDARD TABLE OF ty_op,
@@ -146,29 +154,29 @@ AT SELECTION-SCREEN OUTPUT .
 START-OF-SELECTION.
 
 
-IF r_mat = 'X'.
+  IF r_mat = 'X'.
 
-  SELECT * FROM mara
-    INTO TABLE it_mara
-    WHERE matnr IN s_matnr
-    AND mtart IN s_mtart.
+    SELECT * FROM mara
+      INTO TABLE it_mara
+      WHERE matnr IN s_matnr
+      AND mtart IN s_mtart.
 
     IF sy-subrc NE 0.
       MESSAGE 'No Record Found' TYPE 'E'.
     ENDIF.
 
-  SELECT matnr werks lgort labst FROM mard
-    INTO TABLE it_mard
-    FOR ALL ENTRIES IN  it_mara
-    WHERE matnr = it_mara-matnr.
+    SELECT matnr werks lgort labst FROM mard
+      INTO TABLE it_mard
+      FOR ALL ENTRIES IN  it_mara
+      WHERE matnr = it_mara-matnr.
 
- SELECT matnr spras maktx FROM makt
-    INTO TABLE it_makt
-    FOR ALL ENTRIES IN  it_mara
-    WHERE matnr = it_mara-matnr.
+    SELECT matnr spras maktx FROM makt
+       INTO TABLE it_makt
+       FOR ALL ENTRIES IN  it_mara
+       WHERE matnr = it_mara-matnr.
 
 
-   LOOP AT it_mard INTO wa_mard.
+    LOOP AT it_mard INTO wa_mard.
 
       READ TABLE it_mara INTO wa_mara WITH KEY matnr = wa_mard-matnr.
 
@@ -191,187 +199,240 @@ IF r_mat = 'X'.
       wa_op-bwscl = wa_mara-bwscl.
 
 
-     READ TABLE it_makt INTO wa_makt WITH KEY matnr = wa_mard-matnr
-                                                  spras = sy-langu.
-IF sy-subrc = 0.
-      wa_op-maktx = wa_makt-maktx.
-ENDIF.
+      READ TABLE it_makt INTO wa_makt WITH KEY matnr = wa_mard-matnr
+                                                   spras = sy-langu.
+      IF sy-subrc = 0.
+        wa_op-maktx = wa_makt-maktx.
+      ENDIF.
       wa_op-werks = wa_mard-werks.
       wa_op-lgort = wa_mard-lgort.
       wa_op-labst = wa_mard-labst.
       APPEND wa_op TO it_op.
       CLEAR wa_op.
-ENDLOOP.
+    ENDLOOP.
 
 
 
-" creating fieldcat for heading *****************************
+    " creating fieldcat for heading *****************************
 
-  DATA : wa_layout TYPE slis_layout_alv,
-         it_fcat   TYPE slis_t_fieldcat_alv,
-         wa_fcat   TYPE slis_fieldcat_alv.
-
-wa_fcat-fieldname = 'MATNR'.
- wa_fcat-seltext_l = 'Material number'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'ERSDA'.
- wa_fcat-seltext_l = 'Creator Date'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'ERNAM'.
- wa_fcat-seltext_l = 'Creator Name'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
+    DATA : wa_layout TYPE slis_layout_alv,
+           it_fcat   TYPE slis_t_fieldcat_alv,
+           wa_fcat   TYPE slis_fieldcat_alv.
 
 
- wa_fcat-fieldname = 'LAEDA'.
- wa_fcat-seltext_l = 'Date of last change'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'AENAM'.
- wa_fcat-seltext_l = 'Name of person who changed last'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'PSTAT'.
- wa_fcat-seltext_l = 'Maintenance status'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'LVORM'.
- wa_fcat-seltext_l = 'Deletion falg'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'MTART'.
- wa_fcat-seltext_l = 'Material Type'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'MBRSH'.
- wa_fcat-seltext_l = 'Industry sector'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'MATKL'.
- wa_fcat-seltext_l = 'Material Group'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'BISMT'.
- wa_fcat-seltext_l = 'Old material number'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'MEINS'.
- wa_fcat-seltext_l = 'Base Unit of Measure'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'BRGEW'.
- wa_fcat-seltext_l = 'Gross Weight'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'NTGEW'.
- wa_fcat-seltext_l = 'Net Weight'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'GEWEI'.
- wa_fcat-seltext_l = 'Weight Unit'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'VOLUM'.
- wa_fcat-seltext_l = 'Volume'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'BWVOR'.
- wa_fcat-seltext_l = 'Procurement rule'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'BWSCL'.
- wa_fcat-seltext_l = 'Source of Supply'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'WERKS'.
- wa_fcat-seltext_l = 'Plant'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'LGORT'.
- wa_fcat-seltext_l = 'Storage Location'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
-
- wa_fcat-fieldname = 'LABST'.
- wa_fcat-seltext_l = 'Stock'.
- APPEND wa_fcat TO it_fcat.
- CLEAR wa_fcat.
+    wa_layout-zebra = 'X'.
+    wa_layout-colwidth_optimize = 'X'.
 
 
-CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
- EXPORTING
-   i_callback_program                = 'ZRAM_ALV2'
-   is_layout                         = wa_layout
-   it_fieldcat                       = it_fcat
+    wa_fcat-fieldname = 'MATNR'.
+    wa_fcat-seltext_l = 'Material number'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
 
-  TABLES
-    t_outtab                          = it_op
- EXCEPTIONS
-   program_error                     = 1
-   OTHERS                            = 2
-          .
-IF sy-subrc <> 0.
+    wa_fcat-fieldname = 'ERSDA'.
+    wa_fcat-seltext_l = 'Creator Date'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'ERNAM'.
+    wa_fcat-seltext_l = 'Creator Name'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+
+    wa_fcat-fieldname = 'LAEDA'.
+    wa_fcat-seltext_l = 'Date of last change'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'AENAM'.
+    wa_fcat-seltext_l = 'Name of person who changed last'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'PSTAT'.
+    wa_fcat-seltext_l = 'Maintenance status'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'LVORM'.
+    wa_fcat-seltext_l = 'Deletion falg'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'MTART'.
+    wa_fcat-seltext_l = 'Material Type'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'MBRSH'.
+    wa_fcat-seltext_l = 'Industry sector'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'MATKL'.
+    wa_fcat-seltext_l = 'Material Group'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'BISMT'.
+    wa_fcat-seltext_l = 'Old material number'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'MEINS'.
+    wa_fcat-seltext_l = 'Base Unit of Measure'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'BRGEW'.
+    wa_fcat-seltext_l = 'Gross Weight'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'NTGEW'.
+    wa_fcat-seltext_l = 'Net Weight'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'GEWEI'.
+    wa_fcat-seltext_l = 'Weight Unit'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'VOLUM'.
+    wa_fcat-seltext_l = 'Volume'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'BWVOR'.
+    wa_fcat-seltext_l = 'Procurement rule'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'BWSCL'.
+    wa_fcat-seltext_l = 'Source of Supply'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'WERKS'.
+    wa_fcat-seltext_l = 'Plant'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'LGORT'.
+    wa_fcat-seltext_l = 'Storage Location'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'LABST'.
+    wa_fcat-seltext_l = 'Stock'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+      EXPORTING
+        i_callback_program = 'SY-REPID'
+        is_layout          = wa_layout
+        it_fieldcat        = it_fcat
+      TABLES
+        t_outtab           = it_op
+      EXCEPTIONS
+        program_error      = 1
+        OTHERS             = 2.
+    IF sy-subrc <> 0.
 * Implement suitable error handling here
-ENDIF.
+    ENDIF.
 
 
-ELSEIF r_pur = 'X'.
+  ELSEIF r_pur = 'X'.
 
-   SELECT * from ekko
-    INTO TABLE it_ekko
-     WHERE ebeln in s_ebeln.
+    SELECT * FROM ekko
+     INTO TABLE it_ekko
+      WHERE ebeln IN s_ebeln.
 
     IF sy-subrc NE 0.
       MESSAGE 'No Records Found' TYPE 'E'.
     ENDIF.
 
-*SELECT   posnr FROM vbkd
-*    INTO TABLE it_vbkd
-*    FOR ALL ENTRIES IN  it_ekko
-*    WHERE ebeln = it_ekko-ebeln.
-*
-*SELECT  ekorg from t024e
-*  INTO TABLE it_t024e
-*  FOR ALL ENTRIES IN it_ekko
-*  WHERE ebeln = it_ekko-ebeln.
+    SELECT ebeln ebelp bukrs matnr matkl FROM ekpo
+        INTO TABLE it_ekpo
+        FOR ALL ENTRIES IN  it_ekko
+        WHERE ebeln = it_ekko-ebeln.
 
-  LOOP AT it_vbkd into wa_vbkd.
+    SELECT ekorg FROM t024e
+      INTO TABLE it_t024e
+      FOR ALL ENTRIES IN it_ekko
+      WHERE ekorg = it_ekko-ekorg.
 
-    READ TABLE it_ekko INTO wa_ekko WITH KEY ebeln = ekko-ebeln.
+    LOOP AT it_ekpo INTO wa_ekpo.
 
-    wa_op2-bukrs = wa_ekko-bukrs.
-    wa_op2-bsart = wa_ekko-bsart.
+      READ TABLE it_ekko INTO wa_ekko WITH KEY ebeln = wa_ekpo-ebeln.
 
-  READ TABLE it_ekko INTO wa_ekko WITH KEY ebeln = ekko-ebeln.
-  IF sy-subrc = 0.
-          wa_op2-ekorg = wa_t024e-ekorg.
+      wa_op2-ebeln = wa_ekko-ebeln.
+      wa_op2-bukrs = wa_ekko-bukrs.
+      wa_op2-bsart = wa_ekko-bsart.
+
+      READ TABLE it_t024e INTO wa_t024e WITH KEY ekorg = wa_ekko-ekorg.
+      IF sy-subrc = 0.
+        wa_op2-ekorg = wa_t024e-ekorg.
+      ENDIF.
+      wa_op2-matnr = wa_ekpo-matnr.
+      wa_op2-matkl = wa_ekpo-matkl.
+      wa_op2-ebelp = wa_ekpo-ebelp.
+
+      APPEND wa_op2 TO it_op2.
+      CLEAR wa_op2.
+
+    ENDLOOP.
+
+    wa_layout-zebra = 'X'.
+    wa_layout-colwidth_optimize = 'X'.
+
+    wa_fcat-fieldname = 'Ebeln'.
+    wa_fcat-seltext_l = 'Purchasing Document Number'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'Bukrs'.
+    wa_fcat-seltext_l = 'Company Code'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'Bsart'.
+    wa_fcat-seltext_l = 'Purchasing Document Type'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'Ebelp'.
+    wa_fcat-seltext_l = 'Item Number of Purchasing Document'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'Matnr'.
+    wa_fcat-seltext_l = 'Material Number'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    wa_fcat-fieldname = 'Matkl'.
+    wa_fcat-seltext_l = 'Material Group'.
+    APPEND wa_fcat TO it_fcat.
+    CLEAR wa_fcat.
+
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+      EXPORTING
+        i_callback_program = 'SY-REPID'
+        is_layout          = wa_layout
+        it_fieldcat        = it_fcat
+      TABLES
+        t_outtab           = it_op2
+      EXCEPTIONS
+        program_error      = 1
+        OTHERS             = 2.
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+    ENDIF.
+
+
   ENDIF.
-        wa_op2-ebeln = wa_ekko-ebeln.
-        wa_op2-bstdk = wa_vbkd-bstdk.
-        wa_op2-posnr = wa_vbkd-posnr.
-
-        APPEND wa_op2 to it_op2.
-        clear wa_op2.
-
-ENDLOOP.
-ENDIF.
