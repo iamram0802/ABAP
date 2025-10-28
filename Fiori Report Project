@@ -23,7 +23,6 @@ association to parent zaccess_DD as _price on $projection.Id = _price.Id
     _price
 }
 
-
 // Stock data definiton *************************************************************************************************************
 
 @AbapCatalog.viewEnhancementCategory: [#NONE]
