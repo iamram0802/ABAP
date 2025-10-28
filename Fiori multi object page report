@@ -1,0 +1,193 @@
+// price data definiton *************************************************************************************************************
+
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'DD for price'
+@Metadata.ignorePropagatedAnnotations: true
+@Metadata.allowExtensions: true
+@ObjectModel.usageType:{
+    serviceQuality: #X,
+    sizeCategory: #S,
+    dataClass: #MIXED
+}
+define view entity zprice_dd as select from zprice_acc
+association to parent zaccess_DD as _price on $projection.Id = _price.Id
+                                          and $projection.Acess = _price.Acess
+{
+    key id as Id,
+    key acess as Acess,
+    key name as Name,
+    mrp as Mrp,
+    
+    
+    _price
+}
+
+// Stock data definiton *************************************************************************************************************
+
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'accesseris DD'
+@Metadata.allowExtensions: true
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+    serviceQuality: #X,
+    sizeCategory: #S,
+    dataClass: #MIXED
+}
+define view entity zaccess_DD as select from zaccesseris
+association to parent zd_stock_root_ as _stock on $projection.Id = _stock.Id
+composition [1..*] of zprice_dd as _price 
+{
+    key id as Id,
+    key acess as Acess,
+    productname as Productname,
+    
+    _stock,
+    _price
+}
+
+// basic root view entity data definiton *************************************************************************************************************
+
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'root_view_for_stock'
+@Metadata.ignorePropagatedAnnotations: true
+@Metadata.allowExtensions: true
+define root view entity zd_stock_root_ as select from zd_stock_
+composition [1..*] of zaccess_DD as _acces 
+{
+    key Id,
+    ProductName,
+    VersionName,
+    Amount,
+ 
+   
+   _STOCK.store_stocks as StoreStocks,
+   _STOCK.plant_stock as PlantStock,
+   
+    _PLANT.plant_name as PlantName,
+    _PLANT.ph_no as PhNo,
+    _PLANT.address as Address,
+    
+    _supplai.supplier_name as SupplierName,
+    _supplai.emailid as Emailid,
+    _supplai.country as Country,
+    
+   
+    _acces
+       
+}
+
+// Projection / consumption view entity  data definiton *************************************************************************************************************
+
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'stocks'
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+    serviceQuality: #X,
+    sizeCategory: #S,
+    dataClass: #MIXED
+}
+define view entity zd_stock_ as select from zram_cdsdb
+association [1..1 ] to zstock_table as _STOCK on $projection.Id = _STOCK.id
+association [1..1 ] to zplant_table as _PLANT on $projection.Id = _PLANT.id
+association [1..1 ] to zsupplier    as _supplai on $projection.Id = _supplai.id
+
+{
+    key id as Id,
+    product_name as ProductName,
+    version_name as VersionName,
+    amount as Amount,
+    
+    _STOCK,
+    _PLANT,
+    _supplai
+
+}
+
+// Metadata definiton *************************************************************************************************************
+
+@Metadata.layer: #CORE
+@UI.headerInfo : { typeNamePlural: 'Detail of Products',
+                   title : { value: 'ProductName' },
+                   description : { value : 'VersionName' } }
+@Search.searchable: true                   
+                   
+annotate entity zd_stock_root_ with
+{
+  @UI.facet:[{position: 10 , label: 'Laptop Details', type: #IDENTIFICATION_REFERENCE},
+             {position: 20 , label: 'Plant Details', type: #FIELDGROUP_REFERENCE, targetQualifier: '_plant'},
+             {position: 30 , label: 'Stock Details', type: #FIELDGROUP_REFERENCE, targetQualifier: '_stock'},
+             {position: 40 , label: 'Supplaier Details', type: #FIELDGROUP_REFERENCE, targetQualifier: '_supplai'},
+             {position: 50,  label: 'Accesseris',type: #LINEITEM_REFERENCE, targetElement: '_acces'}]
+                          
+
+  //****************************************************
+  @UI.selectionField: [{  position: 10 }]
+  @UI.lineItem: [{ position: 10 }]
+  @UI.identification: [{label: 'ID', position: 10 }]
+  Id;
+
+//  @UI.selectionField: [{  position: 20 }]
+  @UI.lineItem: [{ position: 20, cssDefault.width: '10rem' }]
+  @UI.identification: [{label: 'Product Name', position: 20 }]
+  @Search.defaultSearchElement: true
+  @Search.fuzzinessThreshold: 0.7
+  ProductName;
+
+  @UI.selectionField: [{  position: 30 }]
+  @UI.lineItem: [{ position: 30 }]
+  @UI.identification: [{label: 'Version name', position: 30 }]
+  VersionName;
+
+  @UI.lineItem: [{ position: 40}]
+  @UI.identification: [{label: 'Amount', position: 40 }]
+  Amount;
+ 
+  
+
+  //stocks*****************************************************
+
+  @UI.fieldGroup: [{ position: 10, qualifier: '_stock' }]
+  @EndUserText : { label: 'Store stocks', quickInfo: 'Stocks in store' }
+  StoreStocks;
+
+  @UI.fieldGroup: [{ position: 20, qualifier: '_stock' }]
+  @EndUserText : { label: 'Plant stocks', quickInfo: 'Stocks in plant' }
+  PlantStock;
+
+  // plant****************************************************
+
+  @UI.fieldGroup: [{ position: 10, qualifier: '_plant' }]
+  @EndUserText : { label: 'Plant name'}
+  PlantName;
+
+  @UI.fieldGroup: [{ position: 20, qualifier: '_plant' }]
+  @EndUserText : { label: 'Phone number' }
+  PhNo;
+
+  @UI.fieldGroup: [{ position: 30 , qualifier: '_plant' }]
+  @EndUserText : { label: 'Address' }
+  Address;
+
+  // supplaier****************************************************
+
+  @UI.fieldGroup: [{ position: 10, qualifier: '_supplai' }]
+  @EndUserText : { label: 'SupplierName' }
+  SupplierName;
+
+  @UI.fieldGroup: [{ position: 20, qualifier: '_supplai' }]
+  @EndUserText : { label: 'Email ID' }
+  Emailid;
+  @UI.selectionField: [{ position: 40 }]
+  @Consumption.valueHelpDefinition: [ {entity: { name: 'zvh_country', element: 'Country' }}]   //standard VH
+  @UI.fieldGroup: [{ position: 30, qualifier: '_supplai' }]
+  @EndUserText : { label: 'Country' }
+  @UI.lineItem: [{ position: 50 }]
+  Country;  
+  
+  
+}
+
+
