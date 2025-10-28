@@ -106,6 +106,57 @@ association [1..1 ] to zsupplier    as _supplai on $projection.Id = _supplai.id
 
 }
 
+// accesseries datadefiniton *************************************************************************************************************
+
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'accesseris DD'
+@Metadata.allowExtensions: true
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+    serviceQuality: #X,
+    sizeCategory: #S,
+    dataClass: #MIXED
+}
+define view entity zaccess_DD as select from zaccesseris
+association to parent zd_stock_root_ as _stock on $projection.Id = _stock.Id
+composition [1..*] of zprice_dd as _price 
+{
+    key id as Id,
+    key acess as Acess,
+    productname as Productname,
+    
+    _stock,
+    _price
+}
+
+// Price details datadefiniton *************************************************************************************************************
+
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'DD for price'
+@Metadata.ignorePropagatedAnnotations: true
+@Metadata.allowExtensions: true
+@ObjectModel.usageType:{
+    serviceQuality: #X,
+    sizeCategory: #S,
+    dataClass: #MIXED
+}
+define view entity zprice_dd as select from zprice_acc
+association to parent zaccess_DD as _price on $projection.Id = _price.Id
+                                          and $projection.Acess = _price.Acess
+{
+    key id as Id,
+    key acess as Acess,
+    key name as Name,
+    mrp as Mrp,
+    
+    
+    _price
+}
+
+
+
 // Metadata definiton *************************************************************************************************************
 
 @Metadata.layer: #CORE
