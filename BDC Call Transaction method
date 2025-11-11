@@ -1,0 +1,251 @@
+REPORT zram_bdctask2
+       NO STANDARD PAGE HEADING LINE-SIZE 255.
+
+*include bdcrecx1.
+
+START-OF-SELECTION.
+
+DATA:   bdcdata LIKE bdcdata    OCCURS 0 WITH HEADER LINE.
+*       messages of call transaction
+DATA:   messtab LIKE bdcmsgcoll OCCURS 0 WITH HEADER LINE.
+PARAMETERS: p_head TYPE localfile,
+            p_item TYPE localfile.
+
+DATA : lv_file(132) TYPE c,
+       lv_index(2)  TYPE n.
+
+DATA : lv_head TYPE string,
+       lv_item TYPE string.
+
+TYPES : BEGIN OF ty_head,
+  sno TYPE n,
+  auart TYPE auart,
+  vkorg TYPE vkorg,
+  vtweg TYPE vtweg,
+  spart TYPE spart,
+  sold TYPE kunnr,
+  ship TYPE kunnr,
+END OF ty_head.
+
+TYPES : BEGIN OF ty_item,
+      sno TYPE n,
+      matnr TYPE matnr,
+      quan TYPE c,
+END OF ty_item.
+
+DATA : it_head TYPE STANDARD TABLE OF ty_head,
+       wa_head TYPE ty_head,
+       it_item TYPE STANDARD TABLE OF ty_item,
+       wa_item TYPE ty_item.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_head.
+CALL FUNCTION 'F4_FILENAME'
+ EXPORTING
+   program_name        = syst-cprog
+   dynpro_number       = syst-dynnr
+   field_name          = 'P_HEAD '
+ IMPORTING
+   file_name           = p_head.
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_item.
+CALL FUNCTION 'F4_FILENAME'
+ EXPORTING
+   program_name        = syst-cprog
+   dynpro_number       = syst-dynnr
+   field_name          = 'P_ITEM'
+ IMPORTING
+   file_name           = p_item
+          .
+
+START-OF-SELECTION.
+
+lv_head = p_head.
+lv_item = p_item.
+
+CALL FUNCTION 'GUI_UPLOAD'
+  EXPORTING
+    filename                      = lv_head
+*   FILETYPE                      = 'ASC'
+   has_field_separator           = 'X'
+*   HEADER_LENGTH                 = 0
+*   READ_BY_LINE                  = 'X'
+*   DAT_MODE                      = ' '
+*   CODEPAGE                      = ' '
+*   IGNORE_CERR                   = ABAP_TRUE
+*   REPLACEMENT                   = '#'
+*   CHECK_BOM                     = ' '
+*   VIRUS_SCAN_PROFILE            =
+*   NO_AUTH_CHECK                 = ' '
+* IMPORTING
+*   FILELENGTH                    =
+*   HEADER                        =
+  TABLES
+    data_tab                      = it_head
+* CHANGING
+*   ISSCANPERFORMED               = ' '
+ EXCEPTIONS
+   file_open_error               = 1
+   file_read_error               = 2
+   no_batch                      = 3
+   gui_refuse_filetransfer       = 4
+   invalid_type                  = 5
+   no_authority                  = 6
+   unknown_error                 = 7
+   bad_data_format               = 8
+   header_not_allowed            = 9
+   separator_not_allowed         = 10
+   header_too_long               = 11
+   unknown_dp_error              = 12
+   access_denied                 = 13
+   dp_out_of_memory              = 14
+   disk_full                     = 15
+   dp_timeout                    = 16
+   OTHERS                        = 17
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+CALL FUNCTION 'GUI_UPLOAD'
+  EXPORTING
+    filename                      = lv_item
+*   FILETYPE                      = 'ASC'
+    has_field_separator           = 'X'
+*   HEADER_LENGTH                 = 0
+*   READ_BY_LINE                  = 'X'
+*   DAT_MODE                      = ' '
+*   CODEPAGE                      = ' '
+*   IGNORE_CERR                   = ABAP_TRUE
+*   REPLACEMENT                   = '#'
+*   CHECK_BOM                     = ' '
+*   VIRUS_SCAN_PROFILE            =
+*   NO_AUTH_CHECK                 = ' '
+* IMPORTING
+*   FILELENGTH                    =
+*   HEADER                        =
+  TABLES
+    data_tab                      = it_item
+* CHANGING
+*   ISSCANPERFORMED               = ' '
+ EXCEPTIONS
+   file_open_error               = 1
+   file_read_error               = 2
+   no_batch                      = 3
+   gui_refuse_filetransfer       = 4
+   invalid_type                  = 5
+   no_authority                  = 6
+   unknown_error                 = 7
+   bad_data_format               = 8
+   header_not_allowed            = 9
+   separator_not_allowed         = 10
+   header_too_long               = 11
+   unknown_dp_error              = 12
+   access_denied                 = 13
+   dp_out_of_memory              = 14
+   disk_full                     = 15
+   dp_timeout                    = 16
+   OTHERS                        = 17
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+LOOP AT it_head INTO wa_head.
+
+PERFORM bdc_dynpro      USING 'SAPMV45A' '0101'.
+
+PERFORM bdc_field       USING 'BDC_OKCODE'
+                              '/00'.
+PERFORM bdc_field       USING 'VBAK-AUART'
+                              wa_head-auart.
+PERFORM bdc_field       USING 'VBAK-VKORG'
+                              wa_head-vkorg.
+PERFORM bdc_field       USING 'VBAK-VTWEG'
+                              wa_head-vtweg.
+PERFORM bdc_field       USING 'VBAK-SPART'
+                              wa_head-spart.
+PERFORM bdc_dynpro      USING 'SAPMV45A' '4001'.
+PERFORM bdc_field       USING 'BDC_OKCODE'
+                              '/00'.
+
+PERFORM bdc_field       USING 'KUAGV-KUNNR'
+                              wa_head-sold.
+PERFORM bdc_field       USING 'KUWEV-KUNNR'
+                              wa_head-ship.
+PERFORM bdc_dynpro      USING 'SAPMV45A' '4001'.
+PERFORM bdc_field       USING 'BDC_OKCODE'
+                              '=T\02'.
+CLEAR lv_index.
+
+LOOP AT it_item INTO wa_item WHERE sno = wa_head-sno.
+
+lv_index = lv_index + 1.
+
+  CONCATENATE 'RV45A-MABNR(' lv_index ')' INTO lv_file.
+PERFORM bdc_field       USING lv_file
+                              wa_item-matnr.
+
+
+  CONCATENATE 'RV45A-KWMENG(' lv_index ')' INTO lv_file.
+PERFORM bdc_field       USING lv_file
+                              wa_item-quan.
+ENDLOOP.
+
+PERFORM bdc_dynpro      USING 'SAPMV45A' '4001'.
+PERFORM bdc_field       USING 'BDC_OKCODE'
+                              '=SICH'.
+
+CALL  TRANSACTION 'VA01' USING bdcdata MODE 'N' MESSAGES INTO messtab.
+CLEAR bdcdata.
+REFRESH bdcdata.
+ENDLOOP.
+
+DATA : lv_msg(100) TYPE c.
+
+LOOP AT messtab.
+CALL FUNCTION 'FORMAT_MESSAGE'
+ EXPORTING
+   id              = messtab-msgid
+   lang            = sy-langu
+   no              = messtab-msgnr
+   v1              = messtab-msgv1
+   v2              = messtab-msgv2
+   v3              = messtab-msgv3
+   v4              = messtab-msgv4
+ IMPORTING
+   msg             = lv_msg
+ EXCEPTIONS
+   not_found       = 1
+   OTHERS          = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+  WRITE: /.
+  WRITE : lv_msg.
+
+ENDLOOP.
+*----------------------------------------------------------------------*
+*        Start new screen                                              *
+*----------------------------------------------------------------------*
+FORM bdc_dynpro USING program dynpro.
+  CLEAR bdcdata.
+  bdcdata-program  = program.
+  bdcdata-dynpro   = dynpro.
+  bdcdata-dynbegin = 'X'.
+  APPEND bdcdata.
+ENDFORM.
+
+*----------------------------------------------------------------------*
+*        Insert field                                                  *
+*----------------------------------------------------------------------*
+FORM bdc_field USING fnam fval.
+
+    CLEAR bdcdata.
+    bdcdata-fnam = fnam.
+    bdcdata-fval = fval.
+    APPEND bdcdata.
+
+ENDFORM.
+---------------------------------------------------------------------------------------------------
