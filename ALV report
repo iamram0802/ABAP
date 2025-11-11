@@ -1,0 +1,246 @@
+
+Interactive ALV - code
+
+REPORT zram_alv_pf.
+
+DATA : lv_vbeln TYPE vbeln.
+
+SELECT-OPTIONS : s_vbeln FOR lv_vbeln.
+
+TYPES : BEGIN OF ty_vbak,
+  vbeln TYPE vbeln_va,
+  erdat TYPE erdat,
+  erzet TYPE erzet,
+  ernam TYPE ernam,
+  vbtyp TYPE vbtyp,
+END OF ty_vbak.
+
+TYPES :BEGIN OF ty_vbap,
+
+  vbeln TYPE vbeln_va,
+  posnr TYPE posnr_va,
+  matnr TYPE matnr,
+
+END OF ty_vbap.
+
+DATA :  it_vbak TYPE TABLE OF ty_vbak,
+        wa_vbak TYPE ty_vbak.
+DATA :  it_vbap TYPE TABLE OF ty_vbap,
+        wa_vbap TYPE ty_vbap.
+
+  SELECT vbeln erdat erzet ernam vbtyp
+    FROM vbak
+    INTO TABLE it_vbak
+    WHERE vbeln IN  s_vbeln.
+
+
+  DATA: it_fcat   TYPE slis_t_fieldcat_alv,
+        wa_fcat   TYPE slis_fieldcat_alv.
+
+  DATA: it_fcat1   TYPE slis_t_fieldcat_alv,
+        wa_fcat1   TYPE slis_fieldcat_alv.
+
+
+
+ wa_fcat-fieldname = 'VBELN'.
+ WA_FCAT-HOTSPOT = 'X'.
+ wa_fcat-tabname = 'IT_VBAK'.
+ wa_fcat-seltext_l = 'SALES DOCUMENT NUMBER'.
+ APPEND wa_fcat TO it_fcat.
+ CLEAR wa_fcat.
+
+ wa_fcat-fieldname = 'ERDAT'.
+  wa_fcat-tabname = 'IT_VBAK'.
+
+ wa_fcat-seltext_l = 'Creator Date'.
+ APPEND wa_fcat TO it_fcat.
+ CLEAR wa_fcat.
+
+wa_fcat-fieldname = 'ERZET'.
+ wa_fcat-tabname = 'IT_VBAK'.
+
+ wa_fcat-seltext_l = 'ENTRY TIME'.
+ APPEND wa_fcat TO it_fcat.
+ CLEAR wa_fcat.
+
+ wa_fcat-fieldname = 'ERNAM'.
+  wa_fcat-tabname = 'IT_VBAK'.
+
+ wa_fcat-seltext_l = 'Creator Name'.
+ APPEND wa_fcat TO it_fcat.
+ CLEAR wa_fcat.
+
+
+ wa_fcat-fieldname = 'VBTYP'.
+  wa_fcat-tabname = 'IT_VBAK'.
+
+ wa_fcat-seltext_l = 'Date of last change'.
+ APPEND wa_fcat TO it_fcat.
+ CLEAR wa_fcat.
+
+
+ CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+*    I_INTERFACE_CHECK                 = ' '
+*    I_BYPASSING_BUFFER                = ' '
+*    I_BUFFER_ACTIVE                   = ' '
+    i_callback_program                = sy-repid
+    i_callback_pf_status_set          = 'PF_STATUS'
+    i_callback_user_command           = 'USER_COMMAND'
+*    I_CALLBACK_TOP_OF_PAGE            = ' '
+*    I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*    I_CALLBACK_HTML_END_OF_LIST       = ' '
+*    I_STRUCTURE_NAME                  =
+*    I_BACKGROUND_ID                   = ' '
+*    I_GRID_TITLE                      =
+*    I_GRID_SETTINGS                   =
+*    IS_LAYOUT                         =
+    it_fieldcat                       = it_fcat
+*    IT_EXCLUDING                      =
+*    IT_SPECIAL_GROUPS                 =
+*    IT_SORT                           =
+*    IT_FILTER                         =
+*    IS_SEL_HIDE                       =
+*    I_DEFAULT                         = 'X'
+*    I_SAVE                            = ' '
+*    IS_VARIANT                        =
+*    IT_EVENTS                         =
+*    IT_EVENT_EXIT                     =
+*    IS_PRINT                          =
+*    IS_REPREP_ID                      =
+*    I_SCREEN_START_COLUMN             = 0
+*    I_SCREEN_START_LINE               = 0
+*    I_SCREEN_END_COLUMN               = 0
+*    I_SCREEN_END_LINE                 = 0
+*    I_HTML_HEIGHT_TOP                 = 0
+*    I_HTML_HEIGHT_END                 = 0
+*    IT_ALV_GRAPHICS                   =
+*    IT_HYPERLINK                      =
+*    IT_ADD_FIELDCAT                   =
+*    IT_EXCEPT_QINFO                   =
+*    IR_SALV_FULLSCREEN_ADAPTER        =
+*  IMPORTING
+*    E_EXIT_CAUSED_BY_CALLER           =
+*    ES_EXIT_CAUSED_BY_USER            =
+   TABLES
+     t_outtab                          = it_vbak
+  EXCEPTIONS
+    program_error                     = 1
+    OTHERS                            = 2
+           .
+ IF sy-subrc <> 0.
+* Implement suitable error handling here
+ ENDIF.
+
+
+FORM pf_status USING rt_extab TYPE slis_t_extab. "HOW TO FIND DOUBLE CLICK GRIND AND COPY THE NAME PFSTATUS AND FIND IN SAP
+
+  SET PF-STATUS 'SALES'.
+
+ENDFORM.
+
+FORM user_command  USING r_ucomm LIKE sy-ucomm
+                                  rs_selfield TYPE slis_selfield.
+
+
+IF R_UCOMM = 'DISPLAY'.
+
+READ TABLE IT_VBAK INTO WA_VBAK INDEX rs_selfield-TABINDEX. "GIVE OUTPUT BY SELECTED ROW
+IF SY-SUBRC = 0.
+ SELECT vbeln posnr matnr
+  FROM vbap
+  INTO TABLE it_vbap
+  WHERE vbeln = WA_VBAK-VBELN.
+ENDIF.
+
+*
+* SELECT vbeln posnr matnr         " GIVE OUTPUT BY SELECTED VBELN VALUE
+*  FROM vbap
+*  INTO TABLE it_vbap
+*  WHERE vbeln = rs_selfield-VALUE.
+
+
+REFRESH IT_FCAT1.
+
+ wa_fcat1-fieldname = 'VBELN'.
+ wa_fcat1-tabname = 'IT_VBAK'.
+ wa_fcat1-seltext_l = 'SALES DOCUMENT NUMBER'.
+ APPEND wa_fcat1 TO it_fcat1.
+ CLEAR wa_fcat1.
+
+ wa_fcat1-fieldname = 'POSNR'.
+ wa_fcat1-tabname = 'IT_VBAK'.
+ wa_fcat1-seltext_l = 'ITEM NUMBER'.
+ APPEND wa_fcat1 TO it_fcat1.
+ CLEAR wa_fcat1.
+
+ wa_fcat1-fieldname = 'MATNR'.
+ wa_fcat1-tabname = 'IT_VBAK'.
+ wa_fcat1-seltext_l = 'MATERIAL NUMBER'.
+ APPEND wa_fcat1 TO it_fcat1.
+ CLEAR wa_fcat1.
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+ EXPORTING
+*   I_INTERFACE_CHECK                 = ' '
+*   I_BYPASSING_BUFFER                = ' '
+*   I_BUFFER_ACTIVE                   = ' '
+*   I_CALLBACK_PROGRAM                = ' '
+*   I_CALLBACK_PF_STATUS_SET          = ' '
+*   I_CALLBACK_USER_COMMAND           = ' '
+*   I_CALLBACK_TOP_OF_PAGE            = ' '
+*   I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*   I_CALLBACK_HTML_END_OF_LIST       = ' '
+*   I_STRUCTURE_NAME                  =
+*   I_BACKGROUND_ID                   = ' '
+*   I_GRID_TITLE                      =
+*   I_GRID_SETTINGS                   =
+*   IS_LAYOUT                         =
+   IT_FIELDCAT                       = it_fcat1
+*   IT_EXCLUDING                      =
+*   IT_SPECIAL_GROUPS                 =
+*   IT_SORT                           =
+*   IT_FILTER                         =
+*   IS_SEL_HIDE                       =
+*   I_DEFAULT                         = 'X'
+*   I_SAVE                            = ' '
+*   IS_VARIANT                        =
+*   IT_EVENTS                         =
+*   IT_EVENT_EXIT                     =
+*   IS_PRINT                          =
+*   IS_REPREP_ID                      =
+*   I_SCREEN_START_COLUMN             = 0
+*   I_SCREEN_START_LINE               = 0
+*   I_SCREEN_END_COLUMN               = 0
+*   I_SCREEN_END_LINE                 = 0
+*   I_HTML_HEIGHT_TOP                 = 0
+*   I_HTML_HEIGHT_END                 = 0
+*   IT_ALV_GRAPHICS                   =
+*   IT_HYPERLINK                      =
+*   IT_ADD_FIELDCAT                   =
+*   IT_EXCEPT_QINFO                   =
+*   IR_SALV_FULLSCREEN_ADAPTER        =
+* IMPORTING
+*   E_EXIT_CAUSED_BY_CALLER           =
+*   ES_EXIT_CAUSED_BY_USER            =
+  TABLES
+    t_outtab                          = IT_VBAP
+ EXCEPTIONS
+   PROGRAM_ERROR                     = 1
+   OTHERS                            = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+ENDIF.
+
+IF R_UCOMM = '&IC1'.
+
+  SET PARAMETER ID 'AUN' FIELD  rs_selfield-VALUE.
+
+  CALL TRANSACTION 'VA03'.
+
+  ENDIF.
+
+
+ENDFORM.
