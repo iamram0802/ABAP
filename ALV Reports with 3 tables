@@ -1,0 +1,147 @@
+
+
+DATA : va_ebeln TYPE ebeln.
+
+
+SELECT-OPTIONS : s_ebeln FOR va_ebeln.
+
+TYPES : BEGIN OF lty_ekko,
+          ebeln TYPE ebeln,
+          bukrs TYPE bukrs,
+          bstyp TYPE ebstyp,
+        END OF lty_ekko.
+
+DATA : lt_ekko TYPE STANDARD TABLE OF lty_ekko,
+       wa_ekko TYPE lty_ekko.
+
+TYPES : BEGIN OF lty_ekpo,
+          ebeln TYPE ebeln,
+          ebelp TYPE ebelp,
+          matnr TYPE matnr,
+        END OF lty_ekpo.
+
+DATA : lt_ekpo TYPE STANDARD TABLE OF lty_ekpo,
+       wa_ekpo TYPE lty_ekpo.
+
+TYPES : BEGIN OF lty_mara,
+        matnr TYPE matnr,
+        mtart type mtart,
+  END OF lty_mara.
+
+DATA : lt_mara TYPE table of lty_mara.
+
+DATA : lt_op TYPE STANDARD TABLE OF ZRAM_STRC_1,
+       wa_op TYPE ZRAM_STRC_1.
+
+
+SELECT ebeln bukrs bstyp
+  FROM ekko
+  INTO TABLE lt_ekko
+  WHERE   ebeln IN s_ebeln.
+
+IF lt_ekko IS NOT INITIAL.
+  SELECT ebeln ebelp matnr
+  FROM ekpo
+  INTO TABLE lt_ekpo
+  FOR ALL ENTRIES IN lt_ekko
+  WHERE   ebeln = lt_ekko-ebeln.
+ENDIF.
+
+if lt_ekpo is not INITIAL.
+select matnr mtart
+  from mara
+  into table lt_mara
+  for ALL ENTRIES IN lt_ekpo
+  where matnr = lt_ekpo-matnr.
+  endif.
+
+
+LOOP AT LT_EKpo INTO WA_EKpo.                                                          "use item table in loop to get the line items
+
+READ TABLE LT_EKko INTO WA_EKkO WITH  KEY EBELN = WA_EKpO-EBELN.
+READ TABLE lt_mara into data(wa_mara) WITH key matnr = wa_ekpo-matnr.
+        WA_OP-EBELN = WA_EKKO-EBELN.
+        WA_OP-BUKRS = WA_EKKO-BUKRS.
+        WA_OP-BSTYP = WA_EKKO-BSTYP.
+        WA_OP-EBELP = WA_EKPO-EBELP.
+        WA_OP-MATNR = WA_EKPO-MATNR.
+        wa_op-matnr = wa_mara-matnr.
+        wa_op-mtart = wa_mara-mtart.
+
+        APPEND WA_OP TO LT_OP.
+        CLEAR WA_OP.
+ENDLOOP.
+
+
+DATA : it_fcat TYPE slis_t_fieldcat_alv,
+       wa_fcat TYPE slis_fieldcat_alv,
+       IT_LAY TYPE SLIS_LAYOUT_ALV.
+
+IT_LAY-zebra = 'X'.
+WA_fcat-fix_column = 'X'.
+
+CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+  EXPORTING
+*    i_program_name         = sy-repid
+*   i_internal_tabname     =
+    i_structure_name       = 'ZRAM_STRC_1'
+*   i_client_never_display = 'X'
+*   i_inclname             =
+*   i_bypassing_buffer     =
+*   i_buffer_active        =
+  CHANGING
+    ct_fieldcat            = it_fcat
+  EXCEPTIONS
+    inconsistent_interface = 1
+    program_error          = 2
+    OTHERS                 = 3.
+IF sy-subrc <> 0.
+         MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+           WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+ENDIF.
+
+       CALL FUNCTION 'REUSE_ALV_LIST_DISPLAY'
+         EXPORTING
+*           i_interface_check        = space
+*           i_bypassing_buffer       =
+*           i_buffer_active          = space
+*           i_callback_program       =
+*           i_callback_pf_status_set = space
+*           i_callback_user_command  = space
+*           i_structure_name         =
+            is_layout                = IT_LAY
+            it_fieldcat              = IT_FCAT
+*           it_excluding             =
+*           it_special_groups        =
+*           it_sort                  =
+*           it_filter                =
+*           is_sel_hide              =
+*           i_default                = 'X'
+*           i_save                   = space
+*           is_variant               =
+*           it_events                =
+*           it_event_exit            =
+*           is_print                 =
+*           is_reprep_id             =
+*           i_screen_start_column    = 0
+*           i_screen_start_line      = 0
+*           i_screen_end_column      = 0
+*           i_screen_end_line        = 0
+*           ir_salv_list_adapter     =
+*           it_except_qinfo          =
+*           i_suppress_empty_data    = abap_false
+*           io_salv_adapter          =
+*           o_common_hub             =
+*         IMPORTING
+*           e_exit_caused_by_caller  =
+*           es_exit_caused_by_user   =
+         TABLES
+           t_outtab                 = LT_OP
+           EXCEPTIONS
+           program_error            = 1
+           others                   = 2
+         .
+       IF SY-SUBRC <> 0.
+        MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+       ENDIF.
