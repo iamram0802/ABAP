@@ -1,0 +1,236 @@
+REPORT zram_bdctask1
+       NO STANDARD PAGE HEADING LINE-SIZE 255.
+
+*include bdcrecx1.
+TYPES:BEGIN OF ty_table,
+      kunnr TYPE kunnr,
+      telf1 TYPE telf1,
+  END OF ty_table.
+
+
+DATA:   bdcdata LIKE bdcdata    OCCURS 0 WITH HEADER LINE.
+DATA:   messtab LIKE bdcmsgcoll OCCURS 0 WITH HEADER LINE.
+DATA : it_excel TYPE truxs_t_text_data.
+
+DATA : it_input TYPE STANDARD TABLE OF ty_table,
+        wa_input TYPE ty_table.
+
+PARAMETERS :p_file TYPE localfile.
+
+
+
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+
+CALL FUNCTION 'F4_FILENAME'
+ EXPORTING
+   program_name        = syst-cprog
+   dynpro_number       = syst-dynnr
+   field_name          = ' '
+ IMPORTING
+   file_name           = p_file.
+
+
+CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+  EXPORTING
+*   I_FIELD_SEPERATOR          =
+*   I_LINE_HEADER              =
+    i_tab_raw_data             = it_excel
+    i_filename                 = p_file
+  TABLES
+    i_tab_converted_data       = it_input
+ EXCEPTIONS
+   conversion_failed          = 1
+   OTHERS                     = 2
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+data : lv_file type string.
+lv_file = p_file.
+
+CALL FUNCTION 'GUI_UPLOAD'
+  EXPORTING
+    filename                      = lv_file
+   FILETYPE                      = 'ASC'
+   has_field_separator           = 'X'
+*   HEADER_LENGTH                 = 0
+   READ_BY_LINE                  = 'X'
+*   DAT_MODE                      = ' '
+*   CODEPAGE                      = ' '
+*   IGNORE_CERR                   = ABAP_TRUE
+*   REPLACEMENT                   = '#'
+*   CHECK_BOM                     = ' '
+*   VIRUS_SCAN_PROFILE            =
+*   NO_AUTH_CHECK                 = ' '
+* IMPORTING
+*   FILELENGTH                    =
+*   HEADER                        =
+  TABLES
+    data_tab                      = it_input
+* CHANGING
+*   ISSCANPERFORMED               = ' '
+ EXCEPTIONS
+   file_open_error               = 1
+   file_read_error               = 2
+   no_batch                      = 3
+   gui_refuse_filetransfer       = 4
+   invalid_type                  = 5
+   no_authority                  = 6
+   unknown_error                 = 7
+   bad_data_format               = 8
+   header_not_allowed            = 9
+   separator_not_allowed         = 10
+   header_too_long               = 11
+   unknown_dp_error              = 12
+   access_denied                 = 13
+   dp_out_of_memory              = 14
+   disk_full                     = 15
+   dp_timeout                    = 16
+   OTHERS                        = 17
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+START-OF-SELECTION.
+
+LOOP AT it_input INTO wa_input.
+
+PERFORM bdc_dynpro      USING 'SAPMF02D' '0101'.
+
+PERFORM bdc_field       USING 'BDC_OKCODE'
+                              '/00'.
+PERFORM bdc_field       USING 'RF02D-KUNNR'
+                              wa_input-kunnr.
+PERFORM bdc_field       USING 'RF02D-D0110'
+                              'X'.
+PERFORM bdc_dynpro      USING 'SAPMF02D' '0110'.
+
+PERFORM bdc_field       USING 'BDC_OKCODE'
+                              '=UPDA'.
+
+PERFORM bdc_field       USING 'KNA1-TELF1'
+                              wa_input-telf1.
+
+ENDLOOP.
+*
+*CALL TRANSACTION  'XD02' USING bdcdata MODE 'N' UPDATE 'S' MESSAGES INTO messtab.
+*REFRESH bdcdata .
+*
+*ENDLOOP.
+*
+*data: lv_msg type char100.
+*
+*LOOP AT messtab.
+*CALL FUNCTION 'FORMAT_MESSAGE'
+* EXPORTING
+*   ID              = messtab-msgid
+*   LANG            = sy-langu
+*   NO              = messtab-msgnr
+*   V1              = messtab-msgv1
+*   V2              = messtab-msgv2
+*   V3              = messtab-msgv3
+*   V4              = messtab-msgv4
+* IMPORTING
+*   MSG             = lv_msg
+* EXCEPTIONS
+*   NOT_FOUND       = 1
+*   OTHERS          = 2
+*          .
+*IF sy-subrc <> 0.
+** Implement suitable error handling here
+*ENDIF.
+*
+*  write: /.
+*  write : lv_msg.
+*
+*ENDLOOP.
+
+CALL FUNCTION 'BDC_OPEN_GROUP'
+ EXPORTING
+   CLIENT                    = SY-MANDT
+*   DEST                      = FILLER8
+   GROUP                     = 'XD02_GRP'
+*   HOLDDATE                  = FILLER8
+   KEEP                      = 'X'
+   USER                      = sy-uname
+*   RECORD                    = FILLER1
+*   PROG                      = SY-CPROG
+*   DCPFM                     = '%'
+*   DATFM                     = '%'
+* IMPORTING
+*   QID                       =
+ EXCEPTIONS
+   CLIENT_INVALID            = 1
+   DESTINATION_INVALID       = 2
+   GROUP_INVALID             = 3
+   GROUP_IS_LOCKED           = 4
+   HOLDDATE_INVALID          = 5
+   INTERNAL_ERROR            = 6
+   QUEUE_ERROR               = 7
+   RUNNING                   = 8
+   SYSTEM_LOCK_ERROR         = 9
+   USER_INVALID              = 10
+   OTHERS                    = 11
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+CALL FUNCTION 'BDC_INSERT'
+ EXPORTING
+   TCODE                  = 'XD02'
+*   POST_LOCAL             = NOVBLOCAL
+*   PRINTING               = NOPRINT
+*   SIMUBATCH              = ' '
+*   CTUPARAMS              = ' '
+  TABLES
+    dynprotab              = bdcdata
+ EXCEPTIONS
+   INTERNAL_ERROR         = 1
+   NOT_OPEN               = 2
+   QUEUE_ERROR            = 3
+   TCODE_INVALID          = 4
+   PRINTING_INVALID       = 5
+   POSTING_INVALID        = 6
+   OTHERS                 = 7
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+CALL FUNCTION 'BDC_CLOSE_GROUP'
+ EXCEPTIONS
+   NOT_OPEN          = 1
+   QUEUE_ERROR       = 2
+   OTHERS            = 3
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+*----------------------------------------------------------------------*
+*        Start new screen                                              *
+*----------------------------------------------------------------------*
+FORM bdc_dynpro USING program dynpro.
+  CLEAR bdcdata.
+  bdcdata-program  = program.
+  bdcdata-dynpro   = dynpro.
+  bdcdata-dynbegin = 'X'.
+  APPEND bdcdata.
+ENDFORM.
+
+*----------------------------------------------------------------------*
+*        Insert field                                                  *
+*----------------------------------------------------------------------*
+FORM bdc_field USING fnam fval.
+
+    CLEAR bdcdata.
+    bdcdata-fnam = fnam.
+    bdcdata-fval = fval.
+    APPEND bdcdata.
+
+ENDFORM.
